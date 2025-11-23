@@ -4,10 +4,7 @@ class Project < ApplicationRecord
 
   enum status: { draft: 0, active: 1, on_hold: 2, completed: 3, canceled: 4 }
 
-  scope :expensive, -> { where("budget_cents >= ?", 50_000_00) }
-  scope :due_soon, -> { where(due_on: Date.current..7.days.from_now) }
   scope :active, -> { where(status: :active, archived_at: nil) }
-  scope :risky, ->(minimum = "high") { where("risk_level >= ?", minimum) }
   scope :needs_attention, -> {
     active
       .joins(:tasks)
