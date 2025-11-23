@@ -2,6 +2,7 @@ puts "Seeding data tuned for Projects#index filters…"
 
 TARGET_MATCHING = ENV.fetch("SEED_MATCHING_PROJECTS", 10_000).to_i
 TARGET_NON_MATCHING = ENV.fetch("SEED_NON_MATCHING_PROJECTS", 10_000).to_i
+TARGET_VALID_LATEST = ENV.fetch("SEED_VALID_LATEST_PROJECTS", 10_000).to_i
 
 def reset_tables
   puts "Resetting tables..."
@@ -46,6 +47,41 @@ def create_matching_projects
   end
 end
 
+def create_valid_latest_projects_for
+  puts "Creating #{TARGET_VALID_LATEST} projects that match Project.valid_latest_projects_for..."
+
+  TARGET_VALID_LATEST.times do |i|
+    project = Project.create!(
+      name: "Latest-Eligible Project #{i + 1}",
+      status: "active",
+      risk_level: "level_#{i + 1}",
+      budget_cents: 200_000,
+      due_on: Date.current - (i % 30),
+      archived_at: nil
+    )
+
+    project.labels.create!(
+      name: "Safe Label #{i + 1}",
+      category: "feature",
+      risk_level: "low",
+      billable: false,
+      archived_at: nil,
+      color: "green"
+    )
+
+    project.tasks.create!(
+      title: "Open Task #{i + 1}",
+      state: "in_progress",
+      priority: "normal",
+      estimate_minutes: 60,
+      worked_minutes: 30,
+      billable: false,
+      due_on: Date.current - (i % 7),
+      completed_at: nil
+    )
+  end
+end
+
 def create_non_matching_projects
   puts "Creating #{TARGET_NON_MATCHING} non-matching projects..."
 
@@ -85,6 +121,7 @@ end
 ActiveRecord::Base.transaction do
   reset_tables
   create_matching_projects
+  create_valid_latest_projects_for
   create_non_matching_projects
 end
 

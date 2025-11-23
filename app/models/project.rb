@@ -49,4 +49,25 @@ class Project < ApplicationRecord
       .where("COALESCE(tasks.worked_minutes, 0) <= COALESCE(tasks.estimate_minutes, 0) * 1.1")
       .distinct
   }
+
+  def self.valid_latest_projects_for(date: Date.current, exclude_label_id: nil)
+    relation = includes(labels: :tasks)
+      .left_outer_joins(:labels, :tasks)
+      .active
+      .where(due_on: ..date)
+      .where(tasks: { completed_at: nil })
+
+    relation = relation.where.not(labels: { id: exclude_label_id }) if exclude_label_id.present?
+
+    relation
+      .distinct
+      .reject { |project| project.labels.any?(&:high_risk?) }
+      .group_by(&:risk_level)
+      .transform_values { |projects| projects.max_by { |project| project.due_on || Date.new(9999, 12, 31) } }
+      .values
+  end
+
+  def risk_labels
+    labels.filter(&:high_risk?)
+  end
 end

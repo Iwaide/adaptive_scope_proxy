@@ -131,18 +131,6 @@
 <% end %>
 
 <div class="page">
-  <div class="page__header">
-    <h1>プロジェクト</h1>
-    <p>デバッグ用に実際のSQLを確認できます。</p>
-  </div>
-
-  <% if @executed_sql.present? %>
-    <div class="sql-log">
-      <strong>Executed SQL</strong>
-      <%= @executed_sql.join("\n\n") %>
-    </div>
-  <% end %>
-
   <div class="summary">
     <strong><%= @projects.size %></strong>
     <span>件のプロジェクトがヒット</span>
@@ -182,4 +170,16 @@
   <% else %>
     <p class="empty">選択されたスコープに一致するプロジェクトはありません。</p>
   <% end %>
+  <div class="page__header">
+    <h1>プロジェクト</h1>
+    <p>デバッグ用に実際のSQLを確認できます。</p>
+  </div>
+
+  <% if @executed_sql.present? %>
+    <div class="sql-log">
+      <strong>Executed SQL</strong>
+      <%= @executed_sql.join("\n\n") %>
+    </div>
+  <% end %>
+
 </div>
