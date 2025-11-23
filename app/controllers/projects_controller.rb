@@ -6,28 +6,15 @@ class ProjectsController < ApplicationController
     projects = projects.needs_attention if params[:needs_attention].present?
     projects = projects.healthy if params[:healthy].present?
 
-    label_scopes = []
-    label_scopes << Label.active if params[:active_labels].present?
-    label_scopes << Label.risk_flags if params[:label_risk].present?
-    label_scopes << Label.applied_to_billable_tasks if params[:billable_labels].present?
-    if label_scopes.any?
-      projects = projects.joins(:labels)
-      label_scopes.each do |label_scope|
-        projects = projects.merge(label_scope)
-      end
-    end
+    projects = projects.with_active_labels if params[:active_labels].present?
+    projects = projects.with_risk_flag_labels if params[:label_risk].present?
+    projects = projects.with_billable_labels if params[:billable_labels].present?
 
-    task_scopes = []
-    task_scopes << Task.billable if params[:billable_tasks].present?
-    task_scopes << Task.overdue if params[:overdue_tasks].present?
-    task_scopes << Task.slipping if params[:slipping_tasks].present?
-    if task_scopes.any?
-      projects = projects.joins(:tasks)
-      task_scopes.each do |task_scope|
-        projects = projects.merge(task_scope)
-      end
-    end
+    projects = projects.with_billable_tasks if params[:billable_tasks].present?
+    projects = projects.with_overdue_tasks if params[:overdue_tasks].present?
+    projects = projects.with_slipping_tasks if params[:slipping_tasks].present?
 
+    projects = projects.includes(:labels, :tasks)
     @projects = projects.distinct
   end
 end

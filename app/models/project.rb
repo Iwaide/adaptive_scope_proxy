@@ -5,11 +5,40 @@ class Project < ApplicationRecord
   enum :status, { draft: 0, active: 1, on_hold: 2, completed: 3, canceled: 4 }
 
   scope :active, -> { where(status: :active, archived_at: nil) }
-  scope :needs_attention, -> {
-    active
-      .joins(:tasks)
-      .merge(Task.overdue.or(Task.slipping))
+  scope :with_active_labels, -> {
+    joins(:labels)
+      .where(labels: { archived_at: nil })
       .distinct
+  }
+  scope :with_risk_flag_labels, -> {
+    with_active_labels.where(labels: { category: "risk", risk_level: %w[high critical] })
+  }
+  scope :with_billable_labels, -> {
+    joins(labels: :tasks)
+      .where(tasks: { billable: true })
+      .distinct
+  }
+  scope :with_billable_tasks, -> {
+    joins(:tasks)
+      .where(tasks: { billable: true })
+      .distinct
+  }
+  scope :with_overdue_tasks, -> {
+    joins(:tasks)
+      .where(tasks: { completed_at: nil })
+      .where("#{Task.table_name}.due_on <= ?", Date.current)
+      .distinct
+  }
+  scope :with_slipping_tasks, -> {
+    joins(:tasks)
+      .where(tasks: { priority: Task.priorities[:high] })
+      .where("#{Task.table_name}.estimate_minutes > 0")
+      .where("#{Task.table_name}.worked_minutes >= #{Task.table_name}.estimate_minutes * 0.8")
+      .where(tasks: { completed_at: nil })
+      .distinct
+  }
+  scope :needs_attention, -> {
+    active.merge(with_overdue_tasks.or(with_slipping_tasks))
   }
   scope :healthy, -> {
     active

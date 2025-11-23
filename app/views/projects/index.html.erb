@@ -218,13 +218,14 @@
             <span>タスク: <%= project.tasks.size %></span>
           </div>
 
-          <% if project.labels.any? %>
+          <% labels = project.labels.to_a %>
+          <% if labels.any? %>
             <div class="chips">
-              <% project.labels.limit(6).each do |label| %>
+              <% labels.first(6).each do |label| %>
                 <span class="chip"><%= label.name %></span>
               <% end %>
-              <% if project.labels.count > 6 %>
-                <span class="chip">+<%= project.labels.count - 6 %> 件</span>
+              <% if labels.size > 6 %>
+                <span class="chip">+<%= labels.size - 6 %> 件</span>
               <% end %>
             </div>
           <% end %>
