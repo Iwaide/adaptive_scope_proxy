@@ -1,8 +1,4 @@
 class Label < ApplicationRecord
-  include ScopePredicateLinker
-
-  # Attributes (for reference): name, category, color, risk_level, billable, archived_at, project_id
-
   belongs_to :project
   has_many :tasks
 

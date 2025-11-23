@@ -1,9 +1,4 @@
 class Task < ApplicationRecord
-  include ScopePredicateLinker
-
-  # Attributes (for reference): title, state, priority, estimate_minutes, worked_minutes,
-  # kind, due_on, billable, completed_at, label_id, project_id
-
   belongs_to :project
   belongs_to :label, optional: true
 

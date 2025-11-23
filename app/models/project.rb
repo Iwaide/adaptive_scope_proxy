@@ -1,8 +1,4 @@
 class Project < ApplicationRecord
-  include ScopePredicateLinker
-
-  # Attributes (for reference): name, status, risk_level, budget_cents, due_on, archived_at
-
   has_many :tasks, dependent: :destroy
   has_many :labels, dependent: :destroy
 
