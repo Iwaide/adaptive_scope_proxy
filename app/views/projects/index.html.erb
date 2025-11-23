@@ -32,56 +32,7 @@
       color: var(--muted);
     }
     .filters {
-      margin: 24px 0 16px;
-      padding: 16px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 12px 16px;
-      align-items: start;
-    }
-    .filters__group h2 {
-      margin: 0 0 6px;
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--muted);
-    }
-    .filters__group label {
-      display: block;
-      font-size: 15px;
-      margin: 6px 0;
-      cursor: pointer;
-    }
-    .filters__actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-top: 6px;
-    }
-    .btn {
-      border: 1px solid var(--accent);
-      background: var(--accent);
-      color: #fff;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-weight: 600;
-      text-decoration: none;
-      display: inline-block;
-      transition: transform 0.05s ease, box-shadow 0.1s ease;
-    }
-    .btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
-    }
-    .btn--ghost {
-      background: transparent;
-      color: var(--muted);
-      border-color: var(--border);
-      box-shadow: none;
+      display: none;
     }
     .summary {
       display: flex;
@@ -157,42 +108,38 @@
       margin-top: 12px;
       color: var(--muted);
     }
+    .sql-log {
+      margin: 16px 0;
+      padding: 12px 14px;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 12px;
+      border: 1px solid #1e293b;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .sql-log strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #38bdf8;
+      font-size: 14px;
+    }
   </style>
 <% end %>
 
 <div class="page">
   <div class="page__header">
     <h1>プロジェクト</h1>
-    <p>プロジェクト・ラベル・タスクのスコープを組み合わせて結果を確認できます。</p>
+    <p>デバッグ用に実際のSQLを確認できます。</p>
   </div>
 
-  <%= form_with url: projects_path, method: :get, local: true, class: "filters" do %>
-    <div class="filters__group">
-      <h2>プロジェクトのスコープ</h2>
-      <label><%= check_box_tag :active, "1", params[:active].present? %> アクティブ</label>
-      <label><%= check_box_tag :needs_attention, "1", params[:needs_attention].present? %> 要注意（期限切れ/スリップ中のタスク）</label>
-      <label><%= check_box_tag :healthy, "1", params[:healthy].present? %> 健全（オン・トラックかつ低リスク）</label>
-    </div>
-
-    <div class="filters__group">
-      <h2>ラベルのスコープ</h2>
-      <label><%= check_box_tag :active_labels, "1", params[:active_labels].present? %> アクティブなラベル</label>
-      <label><%= check_box_tag :label_risk, "1", params[:label_risk].present? %> リスクラベル</label>
-      <label><%= check_box_tag :billable_labels, "1", params[:billable_labels].present? %> 課金対象タスクに紐づくラベル</label>
-    </div>
-
-    <div class="filters__group">
-      <h2>タスクのスコープ</h2>
-      <label><%= check_box_tag :billable_tasks, "1", params[:billable_tasks].present? %> 課金対象タスク</label>
-      <label><%= check_box_tag :overdue_tasks, "1", params[:overdue_tasks].present? %> 期限切れタスク</label>
-      <label><%= check_box_tag :slipping_tasks, "1", params[:slipping_tasks].present? %> スリップ中のタスク</label>
-    </div>
-
-    <div class="filters__actions">
-      <button type="submit" class="btn">スコープを適用</button>
-      <% if request.query_parameters.present? %>
-        <%= link_to "条件をクリア", projects_path, class: "btn btn--ghost" %>
-      <% end %>
+  <% if @executed_sql.present? %>
+    <div class="sql-log">
+      <strong>Executed SQL</strong>
+      <%= @executed_sql.join("\n\n") %>
     </div>
   <% end %>
 
