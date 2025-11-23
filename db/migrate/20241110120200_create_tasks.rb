@@ -4,8 +4,8 @@ class CreateTasks < ActiveRecord::Migration[8.1]
       t.references :project, null: false, foreign_key: true
       t.references :label, foreign_key: true
       t.string :title, null: false
-      t.string :state, null: false, default: "planned"
-      t.string :priority, null: false, default: "normal"
+      t.integer :state, null: false, default: 0
+      t.integer :priority, null: false, default: 0
       t.integer :estimate_minutes, null: false, default: 0
       t.integer :worked_minutes, null: false, default: 0
       t.string :kind

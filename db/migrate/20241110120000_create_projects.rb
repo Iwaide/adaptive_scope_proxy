@@ -2,7 +2,7 @@ class CreateProjects < ActiveRecord::Migration[8.1]
   def change
     create_table :projects do |t|
       t.string :name, null: false
-      t.string :status, null: false, default: "draft"
+      t.integer :status, null: false, default: 0
       t.string :risk_level, null: false, default: "medium"
       t.bigint :budget_cents, null: false, default: 0
       t.date :due_on
