@@ -1,0 +1,237 @@
+<% content_for :title, "Projects" %>
+<% content_for :head do %>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #2563eb;
+      --border: #e2e8f0;
+      --chip: #0ea5e9;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+      background: radial-gradient(circle at 20% 20%, #e0f2fe 0, #f8fafc 35%, #ffffff 100%);
+      color: var(--text);
+    }
+    .page {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
+    }
+    .page__header h1 {
+      margin: 0 0 4px;
+      font-size: 32px;
+      letter-spacing: -0.02em;
+    }
+    .page__header p {
+      margin: 0;
+      color: var(--muted);
+    }
+    .filters {
+      margin: 24px 0 16px;
+      padding: 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px 16px;
+      align-items: start;
+    }
+    .filters__group h2 {
+      margin: 0 0 6px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .filters__group label {
+      display: block;
+      font-size: 15px;
+      margin: 6px 0;
+      cursor: pointer;
+    }
+    .filters__actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 6px;
+    }
+    .btn {
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-block;
+      transition: transform 0.05s ease, box-shadow 0.1s ease;
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+    }
+    .btn--ghost {
+      background: transparent;
+      color: var(--muted);
+      border-color: var(--border);
+      box-shadow: none;
+    }
+    .summary {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin: 12px 0 20px;
+      color: var(--muted);
+    }
+    .summary strong {
+      font-size: 24px;
+      color: var(--text);
+    }
+    .project-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 14px;
+    }
+    .project {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .project__title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .project__title h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .badge {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #e0f2fe;
+      color: #0ea5e9;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+    }
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 4px 0;
+    }
+    .chip {
+      padding: 6px 8px;
+      border-radius: 999px;
+      background: #e0f2fe;
+      color: var(--chip);
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.01em;
+    }
+    .empty {
+      margin-top: 12px;
+      color: var(--muted);
+    }
+  </style>
+<% end %>
+
+<div class="page">
+  <div class="page__header">
+    <h1>Projects</h1>
+    <p>Toggle scopes to see how they compose across projects, labels, and tasks.</p>
+  </div>
+
+  <%= form_with url: projects_path, method: :get, local: true, class: "filters" do %>
+    <div class="filters__group">
+      <h2>Project scopes</h2>
+      <label><%= check_box_tag :active, "1", params[:active].present? %> Active</label>
+      <label><%= check_box_tag :needs_attention, "1", params[:needs_attention].present? %> Needs attention (overdue/slipping tasks)</label>
+      <label><%= check_box_tag :healthy, "1", params[:healthy].present? %> Healthy (on-track, low risk)</label>
+    </div>
+
+    <div class="filters__group">
+      <h2>Label scopes</h2>
+      <label><%= check_box_tag :active_labels, "1", params[:active_labels].present? %> Active labels</label>
+      <label><%= check_box_tag :label_risk, "1", params[:label_risk].present? %> Risk flags</label>
+      <label><%= check_box_tag :billable_labels, "1", params[:billable_labels].present? %> Applied to billable tasks</label>
+    </div>
+
+    <div class="filters__group">
+      <h2>Task scopes</h2>
+      <label><%= check_box_tag :billable_tasks, "1", params[:billable_tasks].present? %> Billable tasks</label>
+      <label><%= check_box_tag :overdue_tasks, "1", params[:overdue_tasks].present? %> Overdue tasks</label>
+      <label><%= check_box_tag :slipping_tasks, "1", params[:slipping_tasks].present? %> Slipping tasks</label>
+    </div>
+
+    <div class="filters__actions">
+      <button type="submit" class="btn">Apply scopes</button>
+      <% if request.query_parameters.present? %>
+        <%= link_to "Clear filters", projects_path, class: "btn btn--ghost" %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="summary">
+    <strong><%= @projects.size %></strong>
+    <span>projects matched</span>
+  </div>
+
+  <% if @projects.any? %>
+    <ul class="project-list">
+      <% @projects.each do |project| %>
+        <li class="project">
+          <div class="project__title">
+            <h3><%= project.name %></h3>
+            <span class="badge"><%= project.status %></span>
+          </div>
+
+          <div class="meta">
+            <span>Risk: <strong><%= project.risk_level %></strong></span>
+            <span>Budget: <%= number_to_currency(project.budget_cents.to_i / 100.0) %></span>
+            <span>Due: <%= project.due_on&.to_s(:long) || "—" %></span>
+            <span>Labels: <%= project.labels.size %></span>
+            <span>Tasks: <%= project.tasks.size %></span>
+          </div>
+
+          <% if project.labels.any? %>
+            <div class="chips">
+              <% project.labels.limit(6).each do |label| %>
+                <span class="chip"><%= label.name %></span>
+              <% end %>
+              <% if project.labels.count > 6 %>
+                <span class="chip">+<%= project.labels.count - 6 %> more</span>
+              <% end %>
+            </div>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="empty">No projects matched the selected scopes.</p>
+  <% end %>
+</div>
