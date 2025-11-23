@@ -14,8 +14,10 @@ class Project < ApplicationRecord
   scope :healthy, -> {
     active
       .left_outer_joins(:tasks)
-      .merge(Task.on_track)
       .where(risk_level: "low")
+      .where(tasks: { completed_at: nil })
+      .where.not(tasks: { state: :blocked })
+      .where("COALESCE(tasks.worked_minutes, 0) <= COALESCE(tasks.estimate_minutes, 0) * 1.1")
       .distinct
   }
 end

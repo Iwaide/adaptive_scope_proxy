@@ -213,7 +213,7 @@
           <div class="meta">
             <span>リスク: <strong><%= project.risk_level %></strong></span>
             <span>予算: <%= number_to_currency(project.budget_cents.to_i / 100.0) %></span>
-            <span>期限: <%= project.due_on&.to_s(:long) || "—" %></span>
+            <span>期限: <%= project.due_on&.to_fs(:long) || "—" %></span>
             <span>ラベル: <%= project.labels.size %></span>
             <span>タスク: <%= project.tasks.size %></span>
           </div>
