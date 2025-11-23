@@ -1,4 +1,4 @@
-<% content_for :title, "Projects" %>
+<% content_for :title, "プロジェクト" %>
 <% content_for :head do %>
   <style>
     :root {
@@ -162,43 +162,43 @@
 
 <div class="page">
   <div class="page__header">
-    <h1>Projects</h1>
-    <p>Toggle scopes to see how they compose across projects, labels, and tasks.</p>
+    <h1>プロジェクト</h1>
+    <p>プロジェクト・ラベル・タスクのスコープを組み合わせて結果を確認できます。</p>
   </div>
 
   <%= form_with url: projects_path, method: :get, local: true, class: "filters" do %>
     <div class="filters__group">
-      <h2>Project scopes</h2>
-      <label><%= check_box_tag :active, "1", params[:active].present? %> Active</label>
-      <label><%= check_box_tag :needs_attention, "1", params[:needs_attention].present? %> Needs attention (overdue/slipping tasks)</label>
-      <label><%= check_box_tag :healthy, "1", params[:healthy].present? %> Healthy (on-track, low risk)</label>
+      <h2>プロジェクトのスコープ</h2>
+      <label><%= check_box_tag :active, "1", params[:active].present? %> アクティブ</label>
+      <label><%= check_box_tag :needs_attention, "1", params[:needs_attention].present? %> 要注意（期限切れ/スリップ中のタスク）</label>
+      <label><%= check_box_tag :healthy, "1", params[:healthy].present? %> 健全（オン・トラックかつ低リスク）</label>
     </div>
 
     <div class="filters__group">
-      <h2>Label scopes</h2>
-      <label><%= check_box_tag :active_labels, "1", params[:active_labels].present? %> Active labels</label>
-      <label><%= check_box_tag :label_risk, "1", params[:label_risk].present? %> Risk flags</label>
-      <label><%= check_box_tag :billable_labels, "1", params[:billable_labels].present? %> Applied to billable tasks</label>
+      <h2>ラベルのスコープ</h2>
+      <label><%= check_box_tag :active_labels, "1", params[:active_labels].present? %> アクティブなラベル</label>
+      <label><%= check_box_tag :label_risk, "1", params[:label_risk].present? %> リスクラベル</label>
+      <label><%= check_box_tag :billable_labels, "1", params[:billable_labels].present? %> 課金対象タスクに紐づくラベル</label>
     </div>
 
     <div class="filters__group">
-      <h2>Task scopes</h2>
-      <label><%= check_box_tag :billable_tasks, "1", params[:billable_tasks].present? %> Billable tasks</label>
-      <label><%= check_box_tag :overdue_tasks, "1", params[:overdue_tasks].present? %> Overdue tasks</label>
-      <label><%= check_box_tag :slipping_tasks, "1", params[:slipping_tasks].present? %> Slipping tasks</label>
+      <h2>タスクのスコープ</h2>
+      <label><%= check_box_tag :billable_tasks, "1", params[:billable_tasks].present? %> 課金対象タスク</label>
+      <label><%= check_box_tag :overdue_tasks, "1", params[:overdue_tasks].present? %> 期限切れタスク</label>
+      <label><%= check_box_tag :slipping_tasks, "1", params[:slipping_tasks].present? %> スリップ中のタスク</label>
     </div>
 
     <div class="filters__actions">
-      <button type="submit" class="btn">Apply scopes</button>
+      <button type="submit" class="btn">スコープを適用</button>
       <% if request.query_parameters.present? %>
-        <%= link_to "Clear filters", projects_path, class: "btn btn--ghost" %>
+        <%= link_to "条件をクリア", projects_path, class: "btn btn--ghost" %>
       <% end %>
     </div>
   <% end %>
 
   <div class="summary">
     <strong><%= @projects.size %></strong>
-    <span>projects matched</span>
+    <span>件のプロジェクトがヒット</span>
   </div>
 
   <% if @projects.any? %>
@@ -211,11 +211,11 @@
           </div>
 
           <div class="meta">
-            <span>Risk: <strong><%= project.risk_level %></strong></span>
-            <span>Budget: <%= number_to_currency(project.budget_cents.to_i / 100.0) %></span>
-            <span>Due: <%= project.due_on&.to_s(:long) || "—" %></span>
-            <span>Labels: <%= project.labels.size %></span>
-            <span>Tasks: <%= project.tasks.size %></span>
+            <span>リスク: <strong><%= project.risk_level %></strong></span>
+            <span>予算: <%= number_to_currency(project.budget_cents.to_i / 100.0) %></span>
+            <span>期限: <%= project.due_on&.to_s(:long) || "—" %></span>
+            <span>ラベル: <%= project.labels.size %></span>
+            <span>タスク: <%= project.tasks.size %></span>
           </div>
 
           <% if project.labels.any? %>
@@ -224,7 +224,7 @@
                 <span class="chip"><%= label.name %></span>
               <% end %>
               <% if project.labels.count > 6 %>
-                <span class="chip">+<%= project.labels.count - 6 %> more</span>
+                <span class="chip">+<%= project.labels.count - 6 %> 件</span>
               <% end %>
             </div>
           <% end %>
@@ -232,6 +232,6 @@
       <% end %>
     </ul>
   <% else %>
-    <p class="empty">No projects matched the selected scopes.</p>
+    <p class="empty">選択されたスコープに一致するプロジェクトはありません。</p>
   <% end %>
 </div>

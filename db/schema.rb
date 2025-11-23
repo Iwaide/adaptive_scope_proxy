@@ -14,12 +14,12 @@ ActiveRecord::Schema[8.1].define(version: 2024_11_10_120200) do
   create_table "labels", force: :cascade do |t|
     t.datetime "archived_at"
     t.boolean "billable", default: false, null: false
-    t.string "category"
+    t.integer "category"
     t.string "color"
     t.datetime "created_at", null: false
     t.string "name", null: false
     t.integer "project_id", null: false
-    t.string "risk_level"
+    t.integer "risk_level"
     t.datetime "updated_at", null: false
     t.index ["archived_at"], name: "index_labels_on_archived_at"
     t.index ["category"], name: "index_labels_on_category"
