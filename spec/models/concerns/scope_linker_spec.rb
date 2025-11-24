@@ -3,6 +3,15 @@
 require "rails_helper"
 
 RSpec.describe ScopeLinker, type: :model do
+  def count_project_loads(&block)
+    query_count = 0
+    counter_f = ->(_name, _started, _finished, _unique_id, payload) {
+      query_count += 1 if payload[:name] == "Project Load"
+    }
+    ActiveSupport::Notifications.subscribed(counter_f, "sql.active_record", &block)
+    query_count
+  end
+
   before do
     Project.include described_class unless Project < described_class
   end
@@ -42,15 +51,21 @@ RSpec.describe ScopeLinker, type: :model do
       end
       context 'レコードがロードされている場合' do
         it 'Rubyのフィルタリングを使用してスコープを適用する' do
-          projects = Project.all.load
-          expect(projects).not_to receive(:active)
-          active_projects = projects.linked_active
-          expect(active_projects).to all(satisfy { |project| project.active? })
+          query_count = count_project_loads do
+            projects = Project.all.load
+            active_projects = projects.linked_active
+            expect(active_projects).to all(satisfy { |project| project.active? })
+          end
+          expect(query_count).to be 1
         end
+
         it 'scopeを直接使用するとDBクエリが発行される' do
-          projects = Project.all.load
-          active_projects = projects.active
-          expect(active_projects).to all(satisfy { |project| project.active? })
+          query_count = count_project_loads do
+            projects = Project.all.load
+            active_projects = projects.active
+            expect(active_projects).to all(satisfy { |project| project.active? })
+          end
+          expect(query_count).to be 2
         end
       end
     end
