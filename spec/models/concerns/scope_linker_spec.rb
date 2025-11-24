@@ -3,13 +3,15 @@
 require "rails_helper"
 
 RSpec.describe ScopeLinker, type: :model do
-  def count_project_loads(&block)
-    query_count = 0
+  def log_project_loads(&block)
+    queries = []
     counter_f = ->(_name, _started, _finished, _unique_id, payload) {
-      query_count += 1 if payload[:name] == "Project Load"
+      if payload[:name] == "Project Load"
+        queries << payload[:sql]
+      end
     }
     ActiveSupport::Notifications.subscribed(counter_f, "sql.active_record", &block)
-    query_count
+    queries
   end
 
   before do
@@ -51,21 +53,21 @@ RSpec.describe ScopeLinker, type: :model do
       end
       context 'レコードがロードされている場合' do
         it 'Rubyのフィルタリングを使用してスコープを適用する' do
-          query_count = count_project_loads do
+          queries = log_project_loads do
             projects = Project.all.load
             active_projects = projects.linked_active
             expect(active_projects).to all(satisfy { |project| project.active? })
           end
-          expect(query_count).to be 1
+          expect(queries.size).to be 1
         end
 
         it 'scopeを直接使用するとDBクエリが発行される' do
-          query_count = count_project_loads do
+          queries = log_project_loads do
             projects = Project.all.load
             active_projects = projects.active
             expect(active_projects).to all(satisfy { |project| project.active? })
           end
-          expect(query_count).to be 2
+          expect(queries.size).to be 2
         end
       end
 
@@ -77,12 +79,12 @@ RSpec.describe ScopeLinker, type: :model do
               Project.link_scope_predicate(:with_active_labels)
             }.not_to raise_error
 
-            query_count = count_project_loads do
+            queries = log_project_loads do
               projects = Project.all.includes(:labels).load
               scoped_projects = projects.linked_active.linked_with_active_labels
               expect(scoped_projects).to all(satisfy { |project| project.active? && project.with_active_labels? })
             end
-            expect(query_count).to be 1
+            expect(queries.size).to be 1
           end
         end
 
@@ -93,12 +95,12 @@ RSpec.describe ScopeLinker, type: :model do
               Project.link_scope_predicate(:with_active_labels)
             }.not_to raise_error
 
-            query_count = count_project_loads do
+            queries = log_project_loads do
               projects = Project.all.load
               scoped_projects = projects.linked_active.linked_with_active_labels
               expect(scoped_projects).to all(satisfy { |project| project.active? && project.with_active_labels? })
             end
-            expect(query_count).to be 2
+            expect(queries.size).to be 2
           end
         end
       end
@@ -129,20 +131,25 @@ RSpec.describe ScopeLinker, type: :model do
 
       context 'レコードがロードされていない場合' do
         it 'DBクエリを使用してスコープを適用する' do
-          Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
-          expect(Project).to receive(:latest_by_user)
-          Project.linked_latest_by_user
+          queries = log_project_loads do
+            Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+            expect(Project).to receive(:latest_by_user).and_call_original
+            Project.linked_latest_by_user.load
+          end
+          expect(queries.size).to be 1
+          expect(queries.first).to include("ROW_NUMBER")
         end
       end
       context 'レコードがロードされている場合' do
         it 'Rubyのフィルタリングを使用してスコープを適用する' do
-          query_count = count_project_loads do
+          queries = log_project_loads do
             projects = Project.all.load
             latest_projects = projects.linked_latest_by_user
             user_ids = latest_projects.map(&:user_id)
             expect(user_ids.size).to eq user_ids.uniq.size
           end
-          expect(query_count).to be 1
+          expect(queries.size).to be 1
+          expect(queries.first).not_to include("ROW_NUMBER")
         end
       end
     end
