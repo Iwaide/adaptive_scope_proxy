@@ -68,6 +68,40 @@ RSpec.describe ScopeLinker, type: :model do
           expect(query_count).to be 2
         end
       end
+
+      context '複数回link_scope_predicateを呼び出した場合' do
+        context 'includesで関連モデルを事前ロードしている場合' do
+          it '1回のクエリ発行で済む' do
+            expect {
+              Project.link_scope_predicate(:active)
+              Project.link_scope_predicate(:with_active_labels)
+            }.not_to raise_error
+
+            query_count = count_project_loads do
+              projects = Project.all.includes(:labels).load
+              scoped_projects = projects.linked_active.linked_with_active_labels
+              expect(scoped_projects).to all(satisfy { |project| project.active? && project.with_active_labels? })
+            end
+            expect(query_count).to be 1
+          end
+        end
+
+        context 'includesで関連モデルを事前ロードしていない場合' do
+          it '各スコープごとにクエリが発行される' do
+            expect {
+              Project.link_scope_predicate(:active)
+              Project.link_scope_predicate(:with_active_labels)
+            }.not_to raise_error
+
+            query_count = count_project_loads do
+              projects = Project.all.load
+              scoped_projects = projects.linked_active.linked_with_active_labels
+              expect(scoped_projects).to all(satisfy { |project| project.active? && project.with_active_labels? })
+            end
+            expect(query_count).to be 2
+          end
+        end
+      end
     end
   end
 end

@@ -70,4 +70,8 @@ class Project < ApplicationRecord
   def risk_labels
     labels.filter(&:high_risk?)
   end
+
+  def with_active_labels?
+    labels.any?(&:active?)
+  end
 end

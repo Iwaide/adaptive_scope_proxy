@@ -7,4 +7,8 @@ class Label < ApplicationRecord
   def high_risk?
     category_risk? && %w[high critical].include?(risk_level)
   end
+
+  def active?
+    archived_at.nil?
+  end
 end
