@@ -34,7 +34,7 @@ ActiveRecord::Schema[8.1].define(version: 2024_11_10_120200) do
     t.date "due_on"
     t.string "name", null: false
     t.string "risk_level", default: "medium", null: false
-    t.string "status", default: "draft", null: false
+    t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["archived_at"], name: "index_projects_on_archived_at"
     t.index ["risk_level"], name: "index_projects_on_risk_level"
@@ -49,9 +49,9 @@ ActiveRecord::Schema[8.1].define(version: 2024_11_10_120200) do
     t.integer "estimate_minutes", default: 0, null: false
     t.string "kind"
     t.integer "label_id"
-    t.string "priority", default: "normal", null: false
+    t.integer "priority", default: 0, null: false
     t.integer "project_id", null: false
-    t.string "state", default: "planned", null: false
+    t.integer "state", default: 0, null: false
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.integer "worked_minutes", default: 0, null: false

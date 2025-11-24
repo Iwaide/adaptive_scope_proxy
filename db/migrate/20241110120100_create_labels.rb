@@ -3,9 +3,9 @@ class CreateLabels < ActiveRecord::Migration[8.1]
     create_table :labels do |t|
       t.references :project, null: false, foreign_key: true
       t.string :name, null: false
-      t.string :category
+      t.integer :category
       t.string :color
-      t.string :risk_level
+      t.integer :risk_level
       t.boolean :billable, null: false, default: false
       t.datetime :archived_at
 
