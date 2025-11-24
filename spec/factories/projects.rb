@@ -1,5 +1,6 @@
 FactoryBot.define do
   factory :project do
+    association :user
     sequence(:name) { |n| "プロジェクト#{n}" }
     status { "active" }
     risk_level { "medium" }

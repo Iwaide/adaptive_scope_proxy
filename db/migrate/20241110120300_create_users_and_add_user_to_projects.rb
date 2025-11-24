@@ -1,0 +1,11 @@
+class CreateUsersAndAddUserToProjects < ActiveRecord::Migration[8.1]
+  def change
+    create_table :users do |t|
+      t.string :name, null: false
+
+      t.timestamps
+    end
+
+    add_reference :projects, :user, null: false, foreign_key: true
+  end
+end

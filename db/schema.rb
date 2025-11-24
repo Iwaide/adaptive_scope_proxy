@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2024_11_10_120200) do
+ActiveRecord::Schema[8.1].define(version: 2024_11_10_120300) do
   create_table "labels", force: :cascade do |t|
     t.datetime "archived_at"
     t.boolean "billable", default: false, null: false
@@ -36,9 +36,11 @@ ActiveRecord::Schema[8.1].define(version: 2024_11_10_120200) do
     t.string "risk_level", default: "medium", null: false
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
     t.index ["archived_at"], name: "index_projects_on_archived_at"
     t.index ["risk_level"], name: "index_projects_on_risk_level"
     t.index ["status"], name: "index_projects_on_status"
+    t.index ["user_id"], name: "index_projects_on_user_id"
   end
 
   create_table "tasks", force: :cascade do |t|
@@ -63,7 +65,14 @@ ActiveRecord::Schema[8.1].define(version: 2024_11_10_120200) do
     t.index ["state"], name: "index_tasks_on_state"
   end
 
+  create_table "users", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+  end
+
   add_foreign_key "labels", "projects"
+  add_foreign_key "projects", "users"
   add_foreign_key "tasks", "labels"
   add_foreign_key "tasks", "projects"
 end

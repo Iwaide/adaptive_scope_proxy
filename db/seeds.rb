@@ -9,6 +9,11 @@ def reset_tables
   Task.delete_all
   Label.delete_all
   Project.delete_all
+  User.delete_all
+end
+
+def seed_user
+  @seed_user ||= User.create!(name: "Seed User")
 end
 
 def create_matching_projects
@@ -21,7 +26,8 @@ def create_matching_projects
       risk_level: "medium",
       budget_cents: 300_000,
       due_on: Date.current + 30.days,
-      archived_at: nil
+      archived_at: nil,
+      user: seed_user
     )
 
     label = project.labels.create!(
@@ -57,7 +63,8 @@ def create_valid_latest_projects_for
       risk_level: "level_#{i + 1}",
       budget_cents: 200_000,
       due_on: Date.current - (i % 30),
-      archived_at: nil
+      archived_at: nil,
+      user: seed_user
     )
 
     project.labels.create!(
@@ -92,7 +99,8 @@ def create_non_matching_projects
       risk_level: "low",
       budget_cents: 150_000,
       due_on: Date.current + 45.days,
-      archived_at: nil
+      archived_at: nil,
+      user: seed_user
     )
 
     label = project.labels.create!(
