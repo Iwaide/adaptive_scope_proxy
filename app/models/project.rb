@@ -59,8 +59,8 @@ class Project < ApplicationRecord
       .distinct
   }
 
-  def self.latest_by_user_filtering(records)
-    records.sort_by { [ it.user_id, -it.due_on.to_i ] }
+  def self.latest_by_user_filter(records)
+    records.sort_by { [ it.user_id, -it.due_on.to_time.to_i ] }
             .uniq { |rec| rec.user_id }
   end
 

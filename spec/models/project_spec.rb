@@ -14,6 +14,9 @@ RSpec.describe Project do
 
       expect(result).to contain_exactly(latest, other_user_project)
       expect(result).not_to include(older)
+
+      result2 = Project.latest_by_user_filter(Project.all)
+      expect(result2).to contain_exactly(latest, other_user_project)
     end
   end
 end
