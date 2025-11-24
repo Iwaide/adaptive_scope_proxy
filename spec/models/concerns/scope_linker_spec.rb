@@ -104,4 +104,47 @@ RSpec.describe ScopeLinker, type: :model do
       end
     end
   end
+
+  describe '.link_scope_filter' do
+    context 'scopeが存在しない場合' do
+      it 'ArgumentErrorを発生させる' do
+        expect {
+          Project.link_scope_filter(:non_existent_scope)
+        }.to raise_error(ArgumentError, /Scope non_existent_scope is not defined/)
+      end
+    end
+    context 'filterメソッドが存在しない場合' do
+      it 'ArgumentErrorを発生させる' do
+        expect {
+          Project.link_scope_filter(:active, filter: :non_existent_filter)
+        }.to raise_error(ArgumentError, /Filter method non_existent_filter is not defined/)
+      end
+    end
+    context 'scopeとfilterメソッドが両方存在する場合' do
+      it 'link_scope_filterの設定ができる' do
+        expect {
+          Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+        }.not_to raise_error
+      end
+
+      context 'レコードがロードされていない場合' do
+        it 'DBクエリを使用してスコープを適用する' do
+          Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+          expect(Project).to receive(:latest_by_user)
+          Project.linked_latest_by_user
+        end
+      end
+      context 'レコードがロードされている場合' do
+        it 'Rubyのフィルタリングを使用してスコープを適用する' do
+          query_count = count_project_loads do
+            projects = Project.all.load
+            latest_projects = projects.linked_latest_by_user
+            user_ids = latest_projects.map(&:user_id)
+            expect(user_ids.size).to eq user_ids.uniq.size
+          end
+          expect(query_count).to be 1
+        end
+      end
+    end
+  end
 end

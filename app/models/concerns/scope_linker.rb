@@ -33,5 +33,37 @@ module ScopeLinker
         end
       end
     end
+
+    def link_scope_filter(scope_name, filter: "#{scope_name}_filter")
+      raise ArgumentError, "Scope #{scope_name} is not defined" unless respond_to?(scope_name)
+      raise ArgumentError, "Filter method #{filter} is not defined" unless respond_to?(filter)
+      singleton_class.define_method("linked_#{scope_name}") do |*args, &blk|
+        scoped_records = self.public_send(scope_name, *args, &blk)
+      end
+      # Relation 用のモジュールを作成。Model.all で返る relation をこのモジュールで拡張する。
+      relation_module = Module.new do
+        define_method("linked_#{scope_name}") do |*args, &blk|
+          # self は ActiveRecord::Relation のインスタンス、klass はモデルクラス
+          model_scope = klass.public_send(scope_name, *args, &blk)
+
+          # relation がロード済みなら Ruby 側で filter を実行して配列を返す（既存コメントの方針）
+          if loaded?
+            unless klass.respond_to?(filter)
+              raise ArgumentError, "Filter method #{filter} is not defined on #{klass}"
+            end
+            klass.public_send(filter, to_a)
+          else
+            public_send(scope_name, *args, &blk)
+          end
+        end
+      end
+
+      # Model.all が返す relation を常に relation_module で拡張するようにする
+      singleton_class.class_eval do
+        define_method(:all) do
+          super().extending(relation_module)
+        end
+      end
+    end
   end
 end
