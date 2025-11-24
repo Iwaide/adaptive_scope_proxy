@@ -52,7 +52,6 @@ class Project < ApplicationRecord
 
   def self.valid_latest_projects_for(date: Date.current, exclude_label_id: nil)
     relation = includes(labels: :tasks)
-      .left_outer_joins(:labels, :tasks)
       .active
       .where(due_on: ..date)
       .where(tasks: { completed_at: nil })
@@ -60,6 +59,7 @@ class Project < ApplicationRecord
     relation = relation.where.not(labels: { id: exclude_label_id }) if exclude_label_id.present?
 
     relation
+      .preload(:tasks)
       .distinct
       .reject { |project| project.labels.any?(&:high_risk?) }
       .group_by(&:risk_level)

@@ -6,6 +6,10 @@ FactoryBot.define do
     budget_cents { 100_000 }
     due_on { Date.current + 7.days }
 
+    trait :draft do
+      status { "draft" }
+    end
+
     trait :low_risk do
       risk_level { "low" }
     end
