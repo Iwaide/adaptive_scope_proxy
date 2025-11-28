@@ -3,10 +3,10 @@
 require "rails_helper"
 
 RSpec.describe ScopeLinker, type: :model do
-  def log_project_loads(&block)
+  def log_queries(&block)
     queries = []
     counter_f = ->(_name, _started, _finished, _unique_id, payload) {
-      if payload[:name] == "Project Load"
+      if payload[:name] == "Project Load" || payload[:name] == "SQL"
         queries << payload[:sql]
       end
     }
@@ -46,14 +46,18 @@ RSpec.describe ScopeLinker, type: :model do
 
       context 'レコードがロードされていない場合' do
         it 'DBクエリを使用してスコープを適用する' do
-          Project.link_scope_predicate(:active)
-          expect(Project).to receive(:active)
-          Project.linked_active
+          queries = log_queries do
+            Project.link_scope_predicate(:active)
+            expect(Project).to receive(:active).and_call_original
+            Project.linked_active.map(&:id)
+          end
+          expect(queries.size).to be 1
         end
       end
       context 'レコードがロードされている場合' do
         it 'Rubyのフィルタリングを使用してスコープを適用する' do
-          queries = log_project_loads do
+          queries = log_queries do
+            Project.link_scope_predicate(:active)
             projects = Project.all.load
             active_projects = projects.linked_active
             expect(active_projects).to all(satisfy { |project| project.active? })
@@ -62,7 +66,7 @@ RSpec.describe ScopeLinker, type: :model do
         end
 
         it 'scopeを直接使用するとDBクエリが発行される' do
-          queries = log_project_loads do
+          queries = log_queries do
             projects = Project.all.load
             active_projects = projects.active
             expect(active_projects).to all(satisfy { |project| project.active? })
@@ -79,7 +83,7 @@ RSpec.describe ScopeLinker, type: :model do
               Project.link_scope_predicate(:with_active_labels)
             }.not_to raise_error
 
-            queries = log_project_loads do
+            queries = log_queries do
               projects = Project.all.includes(:labels).load
               scoped_projects = projects.linked_active.linked_with_active_labels
               expect(scoped_projects).to all(satisfy { |project| project.active? && project.with_active_labels? })
@@ -95,7 +99,7 @@ RSpec.describe ScopeLinker, type: :model do
               Project.link_scope_predicate(:with_active_labels)
             }.not_to raise_error
 
-            queries = log_project_loads do
+            queries = log_queries do
               projects = Project.all.load
               scoped_projects = projects.linked_active.linked_with_active_labels
               expect(scoped_projects).to all(satisfy { |project| project.active? && project.with_active_labels? })
@@ -131,7 +135,7 @@ RSpec.describe ScopeLinker, type: :model do
 
       context 'レコードがロードされていない場合' do
         it 'DBクエリを使用してスコープを適用する' do
-          queries = log_project_loads do
+          queries = log_queries do
             Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
             expect(Project).to receive(:latest_by_user).and_call_original
             Project.linked_latest_by_user.load
@@ -142,8 +146,72 @@ RSpec.describe ScopeLinker, type: :model do
       end
       context 'レコードがロードされている場合' do
         it 'Rubyのフィルタリングを使用してスコープを適用する' do
-          queries = log_project_loads do
+          queries = log_queries do
             projects = Project.all.load
+            latest_projects = projects.linked_latest_by_user
+            user_ids = latest_projects.map(&:user_id)
+            expect(user_ids.size).to eq user_ids.uniq.size
+          end
+          expect(queries.size).to be 1
+          expect(queries.first).not_to include("ROW_NUMBER")
+        end
+      end
+    end
+    context 'Associationから呼ばれているとき' do
+      context 'レコードがロードされている場合' do
+        context 'loadでロードされたとき' do
+          it 'クラスメソッドのfilterが使われる' do
+            user = create(:user)
+            create(:project, user: user)
+            create(:project, :draft, user: user)
+    
+            expect {
+              Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+            }.not_to raise_error
+    
+            queries = log_queries do
+              projects = user.projects.load
+              latest_projects = projects.linked_latest_by_user
+              user_ids = latest_projects.map(&:user_id)
+              expect(user_ids.size).to eq user_ids.uniq.size
+            end
+            expect(queries.size).to be 1
+            expect(queries.first).not_to include("ROW_NUMBER")
+          end
+        end
+        context 'preloadでロードされたとき' do
+          it 'クラスメソッドのfilterが使われる' do
+            user = create(:user)
+            create(:project, user: user)
+            create(:project, :draft, user: user)
+    
+            expect {
+              Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+            }.not_to raise_error
+    
+            queries = log_queries do
+              projects = user.projects.preload(:tasks).load
+              latest_projects = projects.linked_latest_by_user
+              user_ids = latest_projects.map(&:user_id)
+              expect(user_ids.size).to eq user_ids.uniq.size
+            end
+            expect(queries.size).to be 1
+            expect(queries.first).not_to include("ROW_NUMBER")
+          end
+        end
+      end
+      context 'eager_loadでロードされたとき' do
+        it 'classメソッドのfilterが使われる' do
+          user = create(:user)
+          create(:project, user: user)
+          create(:project, :draft, user: user)
+  
+          expect {
+            Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+          }.not_to raise_error
+  
+          queries = log_queries do
+            projects = User.eager_load(:projects).find(user.id).projects
             latest_projects = projects.linked_latest_by_user
             user_ids = latest_projects.map(&:user_id)
             expect(user_ids.size).to eq user_ids.uniq.size

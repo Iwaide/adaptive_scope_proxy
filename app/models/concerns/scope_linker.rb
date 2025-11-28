@@ -40,7 +40,6 @@ module ScopeLinker
     end
 
     def define_linked_scope(scope_name, apply_loaded:)
-
       singleton_class.define_method("linked_#{scope_name}") do |*args, &blk|
         public_send(scope_name, *args, &blk)
       end
@@ -59,6 +58,15 @@ module ScopeLinker
       singleton_class.class_eval do
         define_method(:all) do
           super().extending(relation_module)
+        end
+      end
+      generated_relation_methods.module_eval do
+        define_method("linked_#{scope_name}") do |*args, &blk|
+          if loaded?
+            apply_loaded.call(self, args, blk)
+          else
+            public_send(scope_name, *args, &blk)
+          end
         end
       end
     end

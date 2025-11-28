@@ -1,0 +1,3 @@
+- [ ] AssocciationProxyとAssociation::Relationに生やす？
+- [ ] テストを自動化する？
+- [ ] コメントをつける
