@@ -89,6 +89,7 @@ RSpec.describe ScopeLinker, type: :model do
               expect(scoped_projects).to all(satisfy { |project| project.active? && project.with_active_labels? })
             end
             expect(queries.size).to be 1
+            expect(queries.first).to eq "SELECT \"projects\".* FROM \"projects\""
           end
         end
 
@@ -100,11 +101,14 @@ RSpec.describe ScopeLinker, type: :model do
             }.not_to raise_error
 
             queries = log_queries do
-              projects = Project.all.load
+              projects = Project.all
               scoped_projects = projects.linked_active.linked_with_active_labels
               expect(scoped_projects).to all(satisfy { |project| project.active? && project.with_active_labels? })
             end
-            expect(queries.size).to be 2
+            expect(queries.size).to be 1
+            query = queries.first
+            expect(query).to include('labels')
+            expect(query).to include('archived_at')
           end
         end
       end

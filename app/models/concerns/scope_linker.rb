@@ -40,30 +40,42 @@ module ScopeLinker
     end
 
     def define_linked_scope(scope_name, apply_loaded:)
+      array_module = (@array_module ||= Module.new)
+      relation_module = (@relation_module ||= Module.new)
+
       singleton_class.define_method("linked_#{scope_name}") do |*args, &blk|
         public_send(scope_name, *args, &blk)
       end
 
-      relation_module = Module.new do
+      array_module.module_eval do
+        define_method("linked_#{scope_name}") do |*args, &blk|
+          apply_loaded.call(self, args, blk).extend(array_module)
+        end
+      end
+
+      relation_module.module_eval do
         define_method("linked_#{scope_name}") do |*args, &blk|
           if loaded?
-            apply_loaded.call(self, args, blk)
+            apply_loaded.call(self, args, blk).extend(array_module)
           else
             public_send(scope_name, *args, &blk)
           end
         end
       end
 
-      # Model.all が返す relation を常に relation_module で拡張するようにする
-      singleton_class.class_eval do
-        define_method(:all) do
-          super().extending(relation_module)
+      unless singleton_class.method_defined?(:_scope_linker_all_overridden)
+        singleton_class.class_eval do
+          define_method(:_scope_linker_all_overridden) { true }
+          define_method(:all) do
+            super().extending(@relation_module)
+          end
         end
       end
+
       generated_relation_methods.module_eval do
         define_method("linked_#{scope_name}") do |*args, &blk|
           if loaded?
-            apply_loaded.call(self, args, blk)
+            apply_loaded.call(self, args, blk).extend(array_module)
           else
             public_send(scope_name, *args, &blk)
           end
