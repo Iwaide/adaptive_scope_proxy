@@ -291,6 +291,75 @@ RSpec.describe ScopeLinker, type: :model do
           end
         end
       end
+      context 'レコードがロードされていない場合' do
+        it 'DBスコープ(latest_by_user)が使われる' do
+          user = create(:user)
+          create(:project, user: user)
+          create(:project, :draft, user: user)
+
+          Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+
+          queries = log_queries do
+            expect(Project).to receive(:latest_by_user).and_call_original
+            latest_projects = user.projects.linked_latest_by_user
+            user_ids = latest_projects.map(&:user_id)
+            expect(user_ids.size).to eq user_ids.uniq.size
+          end
+          expect(queries.size).to be 1
+          expect(queries.first).to include("ROW_NUMBER")
+        end
+      end
+    end
+    context 'Relationから呼ばれているとき' do
+      it 'レコードが未ロードならDBスコープを使う' do
+        Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+
+        queries = log_queries do
+          relation = Project.where(status: :draft)
+          expect(Project).to receive(:latest_by_user).and_call_original
+          latest_projects = relation.linked_latest_by_user.load
+          user_ids = latest_projects.map(&:user_id)
+          expect(user_ids.size).to eq user_ids.uniq.size
+        end
+
+        expect(queries.size).to be 1
+        expect(queries.first).to include("ROW_NUMBER")
+      end
+    end
+    context 'レコードが0件のとき' do
+      it '空配列を渡してもエラーにならない' do
+        Project.delete_all
+        Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+
+        projects = Project.all.load
+        expect {
+          latest_projects = projects.linked_latest_by_user
+          expect(latest_projects).to eq []
+        }.not_to raise_error
+      end
+    end
+    context '他のクラスからlinked_がよばれたとき' do
+      before do
+        stub_const('OtherProject', Class.new(ApplicationRecord) do
+          self.table_name = 'projects'
+          include ScopeLinker
+
+          scope :dummy, -> { all } # ダミー
+          def self.dummy_filter(records)
+            records # これもダミー
+          end
+        end)
+      end
+
+      it 'メソッドが混ざらない' do
+        expect {
+          Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+          OtherProject.link_scope_filter(:dummy)
+        }.not_to raise_error
+
+        expect { Project.dummy }.to raise_error(NoMethodError)
+        expect { OtherProject.dummy }.not_to raise_error
+      end
     end
   end
 end
