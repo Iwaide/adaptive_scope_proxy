@@ -55,9 +55,10 @@ module ScopeLinker
 
       relation_module.module_eval do
         define_method("linked_#{scope_name}") do |*args, &blk|
-          if loaded?
+          if respond_to?(:proxy_association) && loaded?
             apply_loaded.call(self, args, blk).extend(array_module)
           else
+            # それ以外 (素の Project.all / where / order など) は常に DB スコープ
             public_send(scope_name, *args, &blk)
           end
         end
@@ -74,7 +75,7 @@ module ScopeLinker
 
       generated_relation_methods.module_eval do
         define_method("linked_#{scope_name}") do |*args, &blk|
-          if loaded?
+          if respond_to?(:proxy_association) && loaded?
             apply_loaded.call(self, args, blk).extend(array_module)
           else
             public_send(scope_name, *args, &blk)

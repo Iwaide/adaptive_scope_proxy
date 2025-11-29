@@ -18,5 +18,11 @@ FactoryBot.define do
     trait :archived do
       archived_at { Time.current }
     end
+
+    trait :with_active_labels do
+      after(:create) do |project|
+        create(:label, :active, project: project)
+      end
+    end
   end
 end
