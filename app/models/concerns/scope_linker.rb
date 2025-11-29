@@ -23,11 +23,13 @@ module ScopeLinker
           raise ArgumentError, "Filter method #{filter} is not defined"
         end
       end
-
+      # NOTE: Arrayのインスタンスからklassを取るのはやりたくないのでここでキャプチャしておく
+      klass = self
       define_linked_scope(
         scope_name,
         apply_loaded: ->(relation, _args, _blk) {
-          relation.klass.public_send(filter, relation.to_a)
+          records = relation.to_a
+          klass.public_send(filter, records)
         }
       )
     end

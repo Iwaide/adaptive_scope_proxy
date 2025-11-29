@@ -79,27 +79,25 @@ RSpec.describe ScopeLinker, type: :model do
       context '複数回link_scope_predicateを呼び出した場合' do
         context 'includesで関連モデルを事前ロードしている場合' do
           before { create(:project, :with_active_labels) }
-          it '毎回クエリ発行する' do
+          # NOTE: loadedによる切り替えはassociationから呼ばれた時のみ
+          it 'スコープがマージされてクエリ発行される' do
             expect {
               Project.link_scope_predicate(:active)
               Project.link_scope_predicate(:with_active_labels)
             }.not_to raise_error
 
+            projects = Project.all.includes(:labels).load
             queries = log_queries do
-              projects = Project.all.includes(:labels).load
               scoped_projects = projects.linked_active.linked_with_active_labels
               expect(scoped_projects).to all(satisfy { |project| project.active? && project.with_active_labels? })
             end
-            # 最初のload, preload, linked_active.linked_with_active_labelsの3回
-            expect(queries.size).to be 3
-            expect(queries.first).to eq "SELECT \"projects\".* FROM \"projects\""
-            expect(queries.second).to include("labels")
-            expect(queries.third).to include("archived_at")
+            expect(queries.size).to be 1
+            expect(queries.first).to include "SELECT DISTINCT"
           end
         end
 
         context 'includesで関連モデルを事前ロードしていない場合' do
-          it '各スコープごとにクエリが発行される' do
+          it 'スコープがマージされてクエリが発行される' do
             expect {
               Project.link_scope_predicate(:active)
               Project.link_scope_predicate(:with_active_labels)
@@ -177,14 +175,37 @@ RSpec.describe ScopeLinker, type: :model do
             expect {
               Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
             }.not_to raise_error
+            projects = user.projects.load
             queries = log_queries do
-              projects = user.projects.load
               latest_projects = projects.linked_latest_by_user
               user_ids = latest_projects.map(&:user_id)
               expect(user_ids.size).to eq user_ids.uniq.size
             end
-            expect(queries.size).to be 1
-            expect(queries.first).not_to include("ROW_NUMBER")
+            expect(queries.size).to be 0
+          end
+          context 'スコープチェーンされたとき' do
+            it 'Ruby側のフィルタリングが使用される' do
+              user = create(:user)
+              create(:project, user: user)
+              create(:project, :draft, user: user)
+
+              expect {
+                Project.link_scope_predicate(:active)
+                Project.link_scope_predicate(:with_active_labels)
+                Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+              }.not_to raise_error
+
+              projects = user.projects.load
+              queries = log_queries do
+                latest_active_projects = projects.linked_active.linked_with_active_labels.linked_latest_by_user
+                expect(latest_active_projects).to all(satisfy { |project| project.with_active_labels? })
+                user_ids = latest_active_projects.map(&:user_id)
+                expect(user_ids.size).to eq user_ids.uniq.size
+              end
+              # NOTE: labelをincludeしていないのでprojectsの数だけ発行される
+              expect(queries.size).to be projects.linked_active.size
+              expect(queries.first).to include "labels"
+            end
           end
         end
         context 'preloadでロードされたとき' do
@@ -197,15 +218,34 @@ RSpec.describe ScopeLinker, type: :model do
               Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
             }.not_to raise_error
 
+            projects = user.projects.preload(:labels).load
             queries = log_queries do
-              projects = user.projects.preload(:tasks).load
-              latest_projects = projects.linked_latest_by_user
-              user_ids = latest_projects.map(&:user_id)
-              expect(user_ids.size).to eq user_ids.uniq.size
+              active_projects = projects.linked_with_active_labels
+              expect(active_projects).to all(satisfy { |project| project.with_active_labels? })
             end
-            # projectsのloadとpreloadの2回
-            expect(queries.size).to be 2
-            expect(queries.first).not_to include("ROW_NUMBER")
+            expect(queries.size).to be 0
+          end
+          context 'スコープチェーンされたとき' do
+            it '追加のクエリが発行されない' do
+              user = create(:user)
+              create(:project, user: user)
+              create(:project, :draft, user: user)
+
+              expect {
+                Project.link_scope_predicate(:active)
+                Project.link_scope_predicate(:with_active_labels)
+                Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+              }.not_to raise_error
+
+              projects = user.projects.preload(:labels).load
+              queries = log_queries do
+                latest_active_projects = projects.linked_active.linked_with_active_labels.linked_latest_by_user
+                expect(latest_active_projects).to all(satisfy { |project| project.with_active_labels? })
+                user_ids = latest_active_projects.map(&:user_id)
+                expect(user_ids.size).to eq user_ids.uniq.size
+              end
+              expect(queries.size).to be 0
+            end
           end
         end
       end
@@ -227,6 +267,28 @@ RSpec.describe ScopeLinker, type: :model do
           end
           # 追加のクエリ発行がない
           expect(queries.size).to be 0
+        end
+        context 'スコープチェーンされたとき' do
+          it '追加のクエリ発行がない' do
+            user = create(:user)
+            create(:project, user: user)
+            create(:project, :draft, user: user)
+
+            expect {
+              Project.link_scope_predicate(:active)
+              Project.link_scope_predicate(:with_active_labels)
+              Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
+            }.not_to raise_error
+
+            projects = User.eager_load(projects: :labels).find(user.id).projects
+            queries = log_queries do
+              latest_active_projects = projects.linked_active.linked_with_active_labels.linked_latest_by_user
+              expect(latest_active_projects).to all(satisfy { |project| project.with_active_labels? })
+              user_ids = latest_active_projects.map(&:user_id)
+              expect(user_ids.size).to eq user_ids.uniq.size
+            end
+            expect(queries.size).to be 0
+          end
         end
       end
     end
