@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ScopeLinker, type: :model do
+RSpec.describe AdaptiveScopeProxy, type: :model do
   def log_queries(&block)
     queries = []
     counter_f = ->(_name, _started, _finished, _unique_id, payload) {
@@ -49,7 +49,7 @@ RSpec.describe ScopeLinker, type: :model do
           queries = log_queries do
             Project.link_scope_predicate(:active)
             expect(Project).to receive(:active).and_call_original
-            Project.linked_active.map(&:id)
+            Project.active.map(&:id)
           end
           expect(queries.size).to be 1
         end
@@ -59,7 +59,7 @@ RSpec.describe ScopeLinker, type: :model do
           queries = log_queries do
             Project.link_scope_predicate(:active)
             projects = Project.all.load
-            active_projects = projects.linked_active
+            active_projects = projects.active
             expect(active_projects).to all(satisfy { |project| project.active? })
           end
           expect(queries.size).to be 2
@@ -88,7 +88,7 @@ RSpec.describe ScopeLinker, type: :model do
 
             projects = Project.all.includes(:labels).load
             queries = log_queries do
-              scoped_projects = projects.linked_active.linked_with_active_labels
+              scoped_projects = projects.active.with_active_labels
               expect(scoped_projects).to all(satisfy { |project| project.active? && project.with_active_labels? })
             end
             expect(queries.size).to be 1
@@ -105,7 +105,7 @@ RSpec.describe ScopeLinker, type: :model do
 
             queries = log_queries do
               projects = Project.all
-              scoped_projects = projects.linked_active.linked_with_active_labels
+              scoped_projects = projects.active.with_active_labels
               expect(scoped_projects).to all(satisfy { |project| project.active? && project.with_active_labels? })
             end
             expect(queries.size).to be 1
@@ -145,7 +145,7 @@ RSpec.describe ScopeLinker, type: :model do
           queries = log_queries do
             Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
             expect(Project).to receive(:latest_by_user).and_call_original
-            Project.linked_latest_by_user.load
+            Project.latest_by_user.load
           end
           expect(queries.size).to be 1
           expect(queries.first).to include("ROW_NUMBER")
@@ -156,7 +156,7 @@ RSpec.describe ScopeLinker, type: :model do
           Project.link_scope_filter(:latest_by_user, filter: :latest_by_user_filter)
           queries = log_queries do
             projects = Project.all.load
-            latest_projects = projects.linked_latest_by_user
+            latest_projects = projects.latest_by_user
             user_ids = latest_projects.map(&:user_id)
             expect(user_ids.size).to eq user_ids.uniq.size
           end
@@ -177,7 +177,7 @@ RSpec.describe ScopeLinker, type: :model do
             }.not_to raise_error
             projects = user.projects.load
             queries = log_queries do
-              latest_projects = projects.linked_latest_by_user
+              latest_projects = projects.latest_by_user
               user_ids = latest_projects.map(&:user_id)
               expect(user_ids.size).to eq user_ids.uniq.size
             end
@@ -197,13 +197,13 @@ RSpec.describe ScopeLinker, type: :model do
 
               projects = user.projects.load
               queries = log_queries do
-                latest_active_projects = projects.linked_active.linked_with_active_labels.linked_latest_by_user
+                latest_active_projects = projects.active.with_active_labels.latest_by_user
                 expect(latest_active_projects).to all(satisfy { |project| project.with_active_labels? })
                 user_ids = latest_active_projects.map(&:user_id)
                 expect(user_ids.size).to eq user_ids.uniq.size
               end
               # NOTE: labelをincludeしていないのでprojectsの数だけ発行される
-              expect(queries.size).to be projects.linked_active.size
+              expect(queries.size).to be projects.active.size
               expect(queries.first).to include "labels"
             end
           end
@@ -220,7 +220,7 @@ RSpec.describe ScopeLinker, type: :model do
 
             projects = user.projects.preload(:labels).load
             queries = log_queries do
-              active_projects = projects.linked_with_active_labels
+              active_projects = projects.with_active_labels
               expect(active_projects).to all(satisfy { |project| project.with_active_labels? })
             end
             expect(queries.size).to be 0
@@ -239,7 +239,7 @@ RSpec.describe ScopeLinker, type: :model do
 
               projects = user.projects.preload(:labels).load
               queries = log_queries do
-                latest_active_projects = projects.linked_active.linked_with_active_labels.linked_latest_by_user
+                latest_active_projects = projects.active.with_active_labels.latest_by_user
                 expect(latest_active_projects).to all(satisfy { |project| project.with_active_labels? })
                 user_ids = latest_active_projects.map(&:user_id)
                 expect(user_ids.size).to eq user_ids.uniq.size
@@ -261,7 +261,7 @@ RSpec.describe ScopeLinker, type: :model do
 
           projects = User.eager_load(:projects).find(user.id).projects
           queries = log_queries do
-            latest_projects = projects.linked_latest_by_user
+            latest_projects = projects.latest_by_user
             user_ids = latest_projects.map(&:user_id)
             expect(user_ids.size).to eq user_ids.uniq.size
           end
@@ -282,7 +282,7 @@ RSpec.describe ScopeLinker, type: :model do
 
             projects = User.eager_load(projects: :labels).find(user.id).projects
             queries = log_queries do
-              latest_active_projects = projects.linked_active.linked_with_active_labels.linked_latest_by_user
+              latest_active_projects = projects.active.with_active_labels.latest_by_user
               expect(latest_active_projects).to all(satisfy { |project| project.with_active_labels? })
               user_ids = latest_active_projects.map(&:user_id)
               expect(user_ids.size).to eq user_ids.uniq.size
@@ -301,7 +301,7 @@ RSpec.describe ScopeLinker, type: :model do
 
           queries = log_queries do
             expect(Project).to receive(:latest_by_user).and_call_original
-            latest_projects = user.projects.linked_latest_by_user
+            latest_projects = user.projects.latest_by_user
             user_ids = latest_projects.map(&:user_id)
             expect(user_ids.size).to eq user_ids.uniq.size
           end
@@ -317,7 +317,7 @@ RSpec.describe ScopeLinker, type: :model do
         queries = log_queries do
           relation = Project.where(status: :draft)
           expect(Project).to receive(:latest_by_user).and_call_original
-          latest_projects = relation.linked_latest_by_user.load
+          latest_projects = relation.latest_by_user.load
           user_ids = latest_projects.map(&:user_id)
           expect(user_ids.size).to eq user_ids.uniq.size
         end
@@ -333,7 +333,7 @@ RSpec.describe ScopeLinker, type: :model do
 
         projects = Project.all.load
         expect {
-          latest_projects = projects.linked_latest_by_user
+          latest_projects = projects.latest_by_user
           expect(latest_projects).to eq []
         }.not_to raise_error
       end
@@ -342,7 +342,7 @@ RSpec.describe ScopeLinker, type: :model do
       before do
         stub_const('OtherProject', Class.new(ApplicationRecord) do
           self.table_name = 'projects'
-          include ScopeLinker
+          include AdaptiveScopeProxy
 
           scope :dummy, -> { all } # ダミー
           def self.dummy_filter(records)

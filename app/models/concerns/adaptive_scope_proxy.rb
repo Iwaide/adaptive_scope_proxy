@@ -1,4 +1,4 @@
-module ScopeLinker
+module AdaptiveScopeProxy
   extend ActiveSupport::Concern
 
   class_methods do
@@ -42,54 +42,37 @@ module ScopeLinker
     end
 
     def define_linked_scope(scope_name, apply_loaded:)
-      scope_linker_mutex.synchronize do
+      adaptive_scope_proxy_mutex.synchronize do
         array_module = (@array_module ||= Module.new)
-        relation_module = (@relation_module ||= Module.new)
-
-        singleton_class.define_method("linked_#{scope_name}") do |*args, &blk|
-          public_send(scope_name, *args, &blk)
-        end
 
         array_module.module_eval do
-          define_method("linked_#{scope_name}") do |*args, &blk|
+          define_method(scope_name) do |*args, &blk|
             apply_loaded.call(self, args, blk).extend(array_module)
           end
         end
 
-        relation_module.module_eval do
-          define_method("linked_#{scope_name}") do |*args, &blk|
-            if respond_to?(:proxy_association) && loaded?
-              apply_loaded.call(self, args, blk).extend(array_module)
-            else
-              # それ以外 (素の Project.all / where / order など) は常に DB スコープ
-              public_send(scope_name, *args, &blk)
-            end
-          end
-        end
-
-        unless singleton_class.method_defined?(:_scope_linker_all_overridden)
-          singleton_class.class_eval do
-            define_method(:_scope_linker_all_overridden) { true }
-            define_method(:all) do
-              super().extending(@relation_module)
-            end
-          end
-        end
-
         generated_relation_methods.module_eval do
-          define_method("linked_#{scope_name}") do |*args, &blk|
+          original = :"_adaptive_scope_proxy_original_#{scope_name}"
+          unless method_defined?(scope_name)
+            raise ArgumentError, "Scope #{scope_name} must be defined as a relation method (named scope)"
+          end
+          # もともと scope が Relation にも定義されているはずなので alias しておく
+          unless method_defined?(original)
+            alias_method original, scope_name
+          end
+          define_method(scope_name) do |*args, &blk|
             if respond_to?(:proxy_association) && loaded?
               apply_loaded.call(self, args, blk).extend(array_module)
             else
-              public_send(scope_name, *args, &blk)
+              public_send(original, *args, &blk)
             end
           end
         end
       end
     end
 
-    def scope_linker_mutex
-      @scope_linker_mutex ||= Mutex.new
+    def adaptive_scope_proxy_mutex
+      @adaptive_scope_proxy_mutex ||= Mutex.new
     end
   end
 end
