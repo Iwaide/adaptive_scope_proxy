@@ -1,37 +1,49 @@
-# Scope Predicate Linker
+# Adaptive Scope Proxy
 
-シンプルなプロジェクト/ラベル/タスクのスコープと、その組み合わせを試すサンプルアプリです。複雑なスコープはコメントアウトし、同名の `?` メソッドでフィルタリングを行う実装になっています。
+## 使い方
 
-## セットアップ
-- Ruby 3.3系想定（`bundle check` で不足があれば `bundle install`）
-- DB: SQLite（手元で `bin/rails db:setup` すればOK）
+### `link_scope_predicate`
+- `scope :active` のような DB スコープと対応する `active?` を `link_scope_predicate :active` で結び付けると、preload 済み association では Ruby 側 predicate だけで絞り込みを完結させます。
+- その結果、`user.projects.active` が追加クエリを発行せず、`Project.active` だけは従来どおり DB スコープとして動きます。
 
-## 主要なスコープ／メソッド
-- Task: `billable`（scope）、`overdue?`, `slipping?`, `on_track?`
-- Label: `active`（scope）、`active?`, `risk_flags?`, `applied_to_billable_tasks?`
-- Project: `active`（scope）、`active_project?`, `needs_attention?`, `healthy?`
-- `ProjectsController#index` は `includes` 済みの配列に対して `select` で上記メソッドを適用しています。
+```ruby
+class Project < ApplicationRecord
+  include AdaptiveScopeProxy
+  scope :active, -> { where(archived_at: nil) }
 
-## 動作確認
-```bash
-bin/rails db:setup
-bin/rails db:seed              # サンプル＋大量データを投入
-# サーバ起動
-bin/rails server
+  def active?
+    archived_at.nil?
+  end
+
+  link_scope_predicate :active
+end
+
+user = User.preload(:projects).find(1)
+user.projects.active.each { |project| puts project.active? }
 ```
-- ブラウザで `/projects` にアクセスし、チェックボックスでフィルタを試せます。
 
-## Seedデータ
-- スコープ検証用の小さなデータセット（Needs Attention / Healthy / Billable Labelsなど）
-- 性能確認用に大量データを生成  
-  - デフォルト: プロジェクト1万件、各プロジェクトにタスク2件  
-  - 環境変数で調整可能:
-    - `SEED_BULK_PROJECTS=20000`
-    - `SEED_BULK_TASKS_PER_PROJECT=3`（1〜5で指定）
-  - 例: `SEED_BULK_PROJECTS=20000 SEED_BULK_TASKS_PER_PROJECT=3 bin/rails db:seed`
+### `link_scope_filter`
+- `link_scope_filter :latest_by_user, filter: :latest_by_user_filter` のように records を受け取って走査するクラスメソッドと scope を結び付けると、loaded? なら Ruby 側 filter、未ロードなら DB 側 scope を自動で選択できます。
+
+```ruby
+class Project < ApplicationRecord
+  include AdaptiveScopeProxy
+  scope :latest_by_user, -> { ... }
+
+  def self.latest_by_user_filter(records)
+    records.sort_by { [ it.user_id, -it.due_on.to_i ] }.uniq { |rec| rec.user_id }
+  end
+
+  link_scope_filter :latest_by_user, filter: :latest_by_user_filter
+end
+
+user = User.preload(:projects).find(1)
+user.projects.latest_by_user.each { ... }
+```
 
 ## テスト
+- 挙動は `spec/models/concerns/adaptive_scope_proxy.rb` の RSpec で確認できます。
+
 ```bash
-bin/rspec spec/requests/projects_index_spec.rb
+bundle exec rspec spec/models/concerns/adaptive_scope_proxy.rb
 ```
-（Bundlerバージョンが合わない場合は `gem install bundler:2.6.9` で揃えてください）
